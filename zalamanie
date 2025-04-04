@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symulacja Prawa Załamania Światła (Snelliusa)</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align items to the top */
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-width: 900px; /* Limit overall width */
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            gap: 20px;
+        }
+
+        h1 {
+            width: 100%;
+            text-align: center;
+            color: #444;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .controls {
+            flex: 1; /* Take up available space */
+            min-width: 200px; /* Minimum width before wrapping */
+            padding-right: 20px;
+            border-right: 1px solid #eee; /* Separator line */
+        }
+        
+        @media (max-width: 700px) {
+            .controls {
+                 border-right: none;
+                 border-bottom: 1px solid #eee; /* Separator below on small screens */
+                 padding-right: 0;
+                 padding-bottom: 20px;
+                 margin-bottom: 20px;
+            }
+        }
+
+
+        .controls h2, .simulation-container h2, .output h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            color: #555;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .control-group span {
+            font-size: 0.9em;
+            color: #0056b3;
+            min-width: 50px; /* Ensure alignment */
+            display: inline-block;
+        }
+
+        .simulation-container {
+            flex: 2; /* Take up more space */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 300px; /* Minimum width */
+        }
+
+        #simulation-svg {
+            width: 100%;
+            max-width: 400px; /* Max width for the drawing */
+            aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
+            border: 1px solid #ddd;
+            background-color: #fff; /* White background for SVG area */
+        }
+        
+        /* SVG styles inspired by the textbook */
+        .medium1-bg {
+            /* Light background for medium 1, maybe with subtle pattern if needed */
+             fill: #e9f5ff; /* Very light blue */
+        }
+
+        .medium2-bg {
+             fill: #cce7ff; /* Slightly darker blue for medium 2 */
+        }
+
+        .boundary-line {
+            stroke: #007bff; /* Blue boundary */
+            stroke-width: 2;
+        }
+
+        .normal-line {
+            stroke: black;
+            stroke-width: 1;
+            stroke-dasharray: 4, 2; /* Dashed line */
+        }
+
+        .incident-ray, .refracted-ray, .reflected-ray {
+            stroke: red;
+            stroke-width: 1.5;
+        }
+
+        .angle-arc {
+            fill: none;
+            stroke: #555;
+            stroke-width: 0.8;
+        }
+
+        .angle-text {
+            font-size: 12px;
+            fill: #333;
+            text-anchor: middle;
+        }
+        
+        .medium-label {
+             font-size: 14px;
+             fill: #444;
+             font-style: italic;
+             text-anchor: start;
+        }
+        
+        .wavefront {
+            stroke: #28a745; /* Green like in the book */
+            stroke-width: 0.8;
+            opacity: 0.7;
+        }
+
+        .output {
+            width: 100%; /* Span full width below controls and simulation */
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .output p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .output span {
+            font-weight: bold;
+            color: #0056b3;
+        }
+
+        /* Arrowhead marker */
+        #arrow {
+          fill: red;
+        }
+        
+        .tir-message {
+            fill: red;
+            font-size: 14px;
+            text-anchor: middle;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prawo Załamania Światła (Snelliusa) - Symulacja</h1>
+
+        <div class="controls">
+            <h2>Parametry wejściowe</h2>
+            
+            <div class="control-group">
+                <label for="angle-slider">Kąt padania (α): <span id="angle-value">45</span>°</label>
+                <input type="range" id="angle-slider" min="0" max="89.9" step="0.1" value="45">
+            </div>
+
+            <div class="control-group">
+                <label for="v1-slider">Prędkość w ośr. 1 (v₁): <span id="v1-value">3.00</span> x10⁸ m/s</label>
+                <input type="range" id="v1-slider" min="1.0" max="3.0" step="0.01" value="3.00">
+                 <!-- Note: Max speed is c, simplified scale here -->
+            </div>
+
+            <div class="control-group">
+                <label for="lambda1-slider">Długość fali w ośr. 1 (λ₁): <span id="lambda1-value">600</span> nm</label>
+                <input type="range" id="lambda1-slider" min="380" max="750" step="1" value="600">
+            </div>
+            
+            <hr style="margin: 20px 0;">
+            
+             <div class="control-group">
+                <label for="n1-slider">Współczynnik załamania ośr. 1 (n₁): <span id="n1-value">1.00</span></label>
+                <input type="range" id="n1-slider" min="1.0" max="2.5" step="0.01" value="1.00">
+                <!-- n >= 1 -->
+            </div>
+
+            <div class="control-group">
+                <label for="n2-slider">Współczynnik załamania ośr. 2 (n₂): <span id="n2-value">1.50</span></label>
+                <input type="range" id="n2-slider" min="1.0" max="2.5" step="0.01" value="1.50">
+                 <!-- n >= 1 -->
+            </div>
+        </div>
+
+        <div class="simulation-container">
+             <h2>Wizualizacja</h2>
+             <svg id="simulation-svg" viewBox="0 0 400 400">
+                <!-- Define arrowhead marker -->
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5"
+                        markerWidth="6" markerHeight="6"
+                        orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" />
+                    </marker>
+                    <!-- Hatch pattern for second medium (optional, can use solid color) -->
+                     <pattern id="hatch" patternUnits="userSpaceOnUse" width="8" height="8">
+                        <path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" style="stroke:#99caff; stroke-width:1" />
+                    </pattern>
+                </defs>
+
+                <!-- Backgrounds for media -->
+                <rect class="medium1-bg" x="0" y="0" width="400" height="200"/>
+                <rect class="medium2-bg" x="0" y="200" width="400" height="200"/>
+                <!-- Or use hatch pattern: -->
+                <!-- <rect x="0" y="200" width="400" height="200" fill="url(#hatch)" stroke="#007bff" stroke-width="1"/> -->
+
+                <!-- Boundary Line -->
+                <line class="boundary-line" x1="0" y1="200" x2="400" y2="200" />
+
+                <!-- Normal Line -->
+                <line id="normal-line" class="normal-line" x1="200" y1="0" x2="200" y2="400" />
+
+                <!-- Wavefronts (Example static representation) -->
+                <!-- Dynamic wavefronts are more complex -->
+                <g id="wavefronts1"></g>
+                <g id="wavefronts2"></g>
+
+                <!-- Incident Ray -->
+                <line id="incident-ray" class="incident-ray" x1="100" y1="50" x2="200" y2="200" marker-end="url(#arrow)" />
+
+                <!-- Refracted Ray -->
+                <line id="refracted-ray" class="refracted-ray" x1="200" y1="200" x2="300" y2="350" marker-end="url(#arrow)" />
+                
+                <!-- Reflected Ray (for TIR) -->
+                 <line id="reflected-ray" class="reflected-ray" x1="200" y1="200" x2="300" y2="50" marker-end="url(#arrow)" visibility="hidden"/>
+
+                <!-- Angle Arcs and Text -->
+                <path id="alpha-arc" class="angle-arc" d="M 220 200 A 20 20 0 0 0 200 180" /> 
+                <text id="alpha-text" class="angle-text" x="230" y="180">α</text>
+
+                <path id="beta-arc" class="angle-arc" d="M 220 200 A 20 20 0 0 1 200 220" />
+                <text id="beta-text" class="angle-text" x="230" y="225">β</text>
+
+                 <!-- Medium Labels -->
+                <text class="medium-label" x="10" y="30">n₁ = <tspan id="svg-n1-label">1.00</tspan></text>
+                <text class="medium-label" x="10" y="230">n₂ = <tspan id="svg-n2-label">1.50</tspan></text>
+                <text id="tir-message" class="tir-message" x="200" y="380" visibility="hidden">Całkowite Wewnętrzne Odbicie!</text>
+
+            </svg>
+        </div>
+
+        <div class="output">
+            <h2>Wyniki obliczeń</h2>
+            <p>Ośrodek 1: n₁ = <span id="output-n1">1.00</span>, v₁ = <span id="output-v1">3.00</span> x10⁸ m/s, λ₁ = <span id="output-lambda1">600</span> nm</p>
+            <p>Ośrodek 2: n₂ = <span id="output-n2">1.50</span>, v₂ = <span id="output-v2">2.00</span> x10⁸ m/s, λ₂ = <span id="output-lambda2">400</span> nm</p>
+            <p>Kąt padania α = <span id="output-alpha">45.0</span>°</p>
+            <p>Kąt załamania β = <span id="output-beta">28.1</span>°</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Get DOM elements
+        const angleSlider = document.getElementById('angle-slider');
+        const v1Slider = document.getElementById('v1-slider');
+        const lambda1Slider = document.getElementById('lambda1-slider');
+        const n1Slider = document.getElementById('n1-slider');
+        const n2Slider = document.getElementById('n2-slider');
+
+        const angleValueSpan = document.getElementById('angle-value');
+        const v1ValueSpan = document.getElementById('v1-value');
+        const lambda1ValueSpan = document.getElementById('lambda1-value');
+        const n1ValueSpan = document.getElementById('n1-value');
+        const n2ValueSpan = document.getElementById('n2-value');
+
+        const outputN1 = document.getElementById('output-n1');
+        const outputV1 = document.getElementById('output-v1');
+        const outputLambda1 = document.getElementById('output-lambda1');
+        const outputN2 = document.getElementById('output-n2');
+        const outputV2 = document.getElementById('output-v2');
+        const outputLambda2 = document.getElementById('output-lambda2');
+        const outputAlpha = document.getElementById('output-alpha');
+        const outputBeta = document.getElementById('output-beta');
+        
+        const svgN1Label = document.getElementById('svg-n1-label');
+        const svgN2Label = document.getElementById('svg-n2-label');
+
+        const incidentRay = document.getElementById('incident-ray');
+        const refractedRay = document.getElementById('refracted-ray');
+        const reflectedRay = document.getElementById('reflected-ray');
+        const alphaArc = document.getElementById('alpha-arc');
+        const betaArc = document.getElementById('beta-arc');
+        const alphaText = document.getElementById('alpha-text');
+        const betaText = document.getElementById('beta-text');
+        const tirMessage = document.getElementById('tir-message');
+        
+        const wavefronts1Group = document.getElementById('wavefronts1');
+        const wavefronts2Group = document.getElementById('wavefronts2');
+
+        const SVG_CENTER_X = 200;
+        const SVG_CENTER_Y = 200;
+        const RAY_LENGTH = 180; // Visual length of rays in SVG units
+
+        function drawWavefronts(group, angleRad, lambdaScale, isMedium1) {
+             group.innerHTML = ''; // Clear previous wavefronts
+             const numWaves = 5;
+             const spacing = lambdaScale * 5; // Visual spacing based on lambda (adjust scale)
+             const waveLength = 80; // Visual length of each wavefront line
+
+             for (let i = 1; i <= numWaves; i++) {
+                 const dist = i * spacing;
+                 // Calculate position along the ray
+                 const rayX = SVG_CENTER_X + (isMedium1 ? -1 : 1) * dist * Math.sin(angleRad);
+                 const rayY = SVG_CENTER_Y + (isMedium1 ? -1 : 1) * dist * Math.cos(angleRad);
+                 
+                 // Calculate endpoints of the wavefront perpendicular to the ray
+                 const offsetX = (waveLength / 2) * Math.cos(angleRad);
+                 const offsetY = (waveLength / 2) * Math.sin(angleRad);
+                 
+                 const x1 = rayX + offsetX;
+                 const y1 = rayY - offsetY;
+                 const x2 = rayX - offsetX;
+                 const y2 = rayY + offsetY;
+
+                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                 line.setAttribute('class', 'wavefront');
+                 line.setAttribute('x1', x1);
+                 line.setAttribute('y1', y1);
+                 line.setAttribute('x2', x2);
+                 line.setAttribute('y2', y2);
+                 group.appendChild(line);
+             }
+        }
+
+
+        function updateSimulation() {
+            // Read values from sliders
+            const alphaDeg = parseFloat(angleSlider.value);
+            const v1_val = parseFloat(v1Slider.value); // This is v1 / (10^8 m/s)
+            const lambda1_val = parseFloat(lambda1Slider.value);
+            const n1 = parseFloat(n1Slider.value);
+            const n2 = parseFloat(n2Slider.value);
+
+            // Update display spans next to sliders
+            angleValueSpan.textContent = alphaDeg.toFixed(1);
+            v1ValueSpan.textContent = v1_val.toFixed(2);
+            lambda1ValueSpan.textContent = lambda1_val.toFixed(0);
+            n1ValueSpan.textContent = n1.toFixed(2);
+            n2ValueSpan.textContent = n2.toFixed(2);
+            
+            // Update SVG labels
+            svgN1Label.textContent = n1.toFixed(2);
+            svgN2Label.textContent = n2.toFixed(2);
+
+            // Convert angle to radians
+            const alphaRad = alphaDeg * (Math.PI / 180);
+
+            // Calculate sin(beta) using Snell's Law: n1 * sin(alpha) = n2 * sin(beta)
+            const sinBeta = (n1 / n2) * Math.sin(alphaRad);
+
+            let betaDeg = NaN;
+            let betaRad = NaN;
+            let v2_val = NaN;
+            let lambda2_val = NaN;
+            let isTIR = false;
+
+            // Check for Total Internal Reflection (TIR)
+            if (sinBeta > 1.0 || sinBeta < -1.0) { // sinBeta cannot be > 1 or < -1
+                isTIR = true;
+                outputBeta.textContent = "TIR";
+                outputV2.textContent = "N/A";
+                outputLambda2.textContent = "N/A";
+                refractedRay.setAttribute('visibility', 'hidden');
+                betaArc.setAttribute('visibility', 'hidden');
+                betaText.setAttribute('visibility', 'hidden');
+                reflectedRay.setAttribute('visibility', 'visible');
+                tirMessage.setAttribute('visibility', 'visible');
+                wavefronts2Group.innerHTML = ''; // Clear wavefronts in medium 2
+            } else {
+                isTIR = false;
+                betaRad = Math.asin(sinBeta);
+                betaDeg = betaRad * (180 / Math.PI);
+
+                // Calculate v2 and lambda2
+                // v1 / v2 = n2 / n1  => v2 = v1 * (n1 / n2)
+                v2_val = v1_val * (n1 / n2);
+                // lambda1 / lambda2 = n2 / n1 => lambda2 = lambda1 * (n1 / n2)
+                lambda2_val = lambda1_val * (n1 / n2);
+
+                // Update output display below simulation
+                outputBeta.textContent = betaDeg.toFixed(1) + "°";
+                outputV2.textContent = v2_val.toFixed(2);
+                outputLambda2.textContent = lambda2_val.toFixed(0);
+                
+                refractedRay.setAttribute('visibility', 'visible');
+                betaArc.setAttribute('visibility', 'visible');
+                betaText.setAttribute('visibility', 'visible');
+                reflectedRay.setAttribute('visibility', 'hidden');
+                tirMessage.setAttribute('visibility', 'hidden');
+            }
+
+            // Update common output values
+            outputN1.textContent = n1.toFixed(2);
+            outputV1.textContent = v1_val.toFixed(2);
+            outputLambda1.textContent = lambda1_val.toFixed(0);
+            outputN2.textContent = n2.toFixed(2);
+            outputAlpha.textContent = alphaDeg.toFixed(1) + "°";
+
+
+            // --- Update SVG Drawing ---
+
+            // Incident Ray
+            const incidentEndX = SVG_CENTER_X - RAY_LENGTH * Math.sin(alphaRad);
+            const incidentEndY = SVG_CENTER_Y - RAY_LENGTH * Math.cos(alphaRad);
+            incidentRay.setAttribute('x1', incidentEndX);
+            incidentRay.setAttribute('y1', incidentEndY);
+            incidentRay.setAttribute('x2', SVG_CENTER_X);
+            incidentRay.setAttribute('y2', SVG_CENTER_Y);
+            
+            // Draw wavefronts for medium 1
+            drawWavefronts(wavefronts1Group, alphaRad, lambda1_val / 50, true); // Adjust scale factor as needed
+
+            // Refracted Ray (if not TIR)
+            if (!isTIR) {
+                const refractedEndX = SVG_CENTER_X + RAY_LENGTH * Math.sin(betaRad);
+                const refractedEndY = SVG_CENTER_Y + RAY_LENGTH * Math.cos(betaRad);
+                refractedRay.setAttribute('x1', SVG_CENTER_X);
+                refractedRay.setAttribute('y1', SVG_CENTER_Y);
+                refractedRay.setAttribute('x2', refractedEndX);
+                refractedRay.setAttribute('y2', refractedEndY);
+                
+                 // Draw wavefronts for medium 2
+                 drawWavefronts(wavefronts2Group, betaRad, lambda2_val / 50, false); // Adjust scale factor as needed
+            }
+            
+            // Reflected Ray (if TIR)
+             if (isTIR) {
+                // Angle of reflection equals angle of incidence
+                const reflectedEndX = SVG_CENTER_X + RAY_LENGTH * Math.sin(alphaRad);
+                const reflectedEndY = SVG_CENTER_Y - RAY_LENGTH * Math.cos(alphaRad);
+                reflectedRay.setAttribute('x1', SVG_CENTER_X);
+                reflectedRay.setAttribute('y1', SVG_CENTER_Y);
+                reflectedRay.setAttribute('x2', reflectedEndX);
+                reflectedRay.setAttribute('y2', reflectedEndY);
+             }
+
+            // Update Angle Arcs and Text Positions
+            // Alpha Arc (angle between normal Y- and incident ray)
+            const alphaArcRadius = 25;
+            const alphaEndX = SVG_CENTER_X - alphaArcRadius * Math.sin(alphaRad);
+            const alphaEndY = SVG_CENTER_Y - alphaArcRadius * Math.cos(alphaRad);
+            // Arc path: M(start) A(radii, x-axis-rotation, large-arc-flag, sweep-flag, end)
+            alphaArc.setAttribute('d', `M ${SVG_CENTER_X} ${SVG_CENTER_Y - alphaArcRadius} A ${alphaArcRadius} ${alphaArcRadius} 0 0 0 ${alphaEndX} ${alphaEndY}`);
+            // Alpha text position (roughly bisecting the angle)
+            const alphaTextRad = alphaRad / 2;
+            alphaText.setAttribute('x', SVG_CENTER_X - (alphaArcRadius + 10) * Math.sin(alphaTextRad));
+            alphaText.setAttribute('y', SVG_CENTER_Y - (alphaArcRadius + 10) * Math.cos(alphaTextRad));
+
+            // Beta Arc (angle between normal Y+ and refracted ray)
+             if (!isTIR) {
+                const betaArcRadius = 25;
+                const betaEndX = SVG_CENTER_X + betaArcRadius * Math.sin(betaRad);
+                const betaEndY = SVG_CENTER_Y + betaArcRadius * Math.cos(betaRad);
+                betaArc.setAttribute('d', `M ${SVG_CENTER_X} ${SVG_CENTER_Y + betaArcRadius} A ${betaArcRadius} ${betaArcRadius} 0 0 0 ${betaEndX} ${betaEndY}`);
+                 // Beta text position
+                 const betaTextRad = betaRad / 2;
+                 betaText.setAttribute('x', SVG_CENTER_X + (betaArcRadius + 10) * Math.sin(betaTextRad));
+                 betaText.setAttribute('y', SVG_CENTER_Y + (betaArcRadius + 10) * Math.cos(betaTextRad));
+            }
+        }
+
+        // Add event listeners to sliders
+        angleSlider.addEventListener('input', updateSimulation);
+        v1Slider.addEventListener('input', updateSimulation);
+        lambda1Slider.addEventListener('input', updateSimulation);
+        n1Slider.addEventListener('input', updateSimulation);
+        n2Slider.addEventListener('input', updateSimulation);
+
+        // Initial calculation and drawing on page load
+        updateSimulation();
+
+    </script>
+</body>
+</html>
